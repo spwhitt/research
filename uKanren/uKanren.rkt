@@ -1,4 +1,5 @@
 #lang racket
+(provide empty-s == any* all* fresh)
 
 ;; Variables
 (define (var x)
