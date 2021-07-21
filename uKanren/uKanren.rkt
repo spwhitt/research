@@ -131,3 +131,7 @@
 
 (module+ test
   (check-equal? ((all* (== A 'a) (== A 'b)) empty-s) '()))
+
+;; A syntactical convenience for defining variables easier
+(define-syntax-rule (fresh (v ...) expr)
+  (let ((v (var 'v)) ...) expr))
