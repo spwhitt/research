@@ -1,5 +1,5 @@
 #lang racket
-(provide var var? var= fresh unify empty-s)
+(provide var var? var= vars fresh unify empty-s)
 
 ;; Variables
 (define (var x)
@@ -15,13 +15,14 @@
 (define-syntax-rule (fresh (v ...) expr)
   (let ((v (var 'v)) ...) expr))
 
+;; `define` style convenience for creating variables
+(define-syntax-rule (vars A ...)
+  (define-values (A ...) (values (var 'A) ...) ))
+
 (module+ test
   (require rackunit)
 
-  (define A (var 'A))
-  (define B (var 'B))
-  (define C (var 'C))
-  (define D (var 'D))
+  (vars A B C D)
 
   (check-true (var? A))
   (check-eq? A A)

@@ -1,6 +1,6 @@
 #lang racket
 (require "lib.rkt")
-(provide == any* all* fresh)
+(provide == any* all* fresh vars)
 
 (module+ test
   ;; 'fail' from rackunit conflicts with my fail defined below
@@ -9,10 +9,7 @@
     check-eq? check-not-eq? check-equal?))
 
   ;; I have decided to use the capital letter convention for variables
-  (define A (var 'A))
-  (define B (var 'B))
-  (define C (var 'C))
-  (define D (var 'D)))
+  (vars A B C D))
 
 ;;; GOALS
 ;;; All goals must return a closure of type (substitution -> substitution list)
