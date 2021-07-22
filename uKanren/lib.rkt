@@ -1,5 +1,5 @@
 #lang racket
-(provide var var? var= vars fresh unify empty-s)
+(provide var var? var= vars fresh unify empty-s apply-substitution)
 
 ;; Variables
 (define (var x)
@@ -46,12 +46,22 @@
     ((and val (var? var)) (resolve (cdr val) subs))
     (else var)))
 
+; TODO: pair? returns #t for var? because my current variables ARE implemented
+; as pairs but this seems like a sharp edge which should be filed down
+(define (apply-substitution s t)
+  (cond
+    ((var? t) (resolve t s))
+    ((pair? t) (cons (apply-substitution s (car t)) (apply-substitution s (cdr t))))
+    (else t)))
+
 (module+ test
   (define ex-s `((,A . ,B) (,B . ,C) (,C . v)))
   (check-equal? (resolve A ex-s) 'v)
   (check-equal? (resolve B ex-s) 'v)
   (check-equal? (resolve 'q ex-s) 'q)
-  (check-equal? (resolve D ex-s) D))
+  (check-equal? (resolve D ex-s) D)
+
+  (check-equal? (apply-substitution ex-s (list A B C D)) (list 'v 'v 'v D)))
 
 ;; Parameters:
 ;;   left, right: Expressions to unify
