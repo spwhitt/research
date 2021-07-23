@@ -1,15 +1,6 @@
 #lang racket
 (require "lib.rkt")
-(provide == any* all* fresh vars)
-
-(module+ test
-  ;; 'fail' from rackunit conflicts with my fail defined below
-  (require (only-in rackunit
-    check-true check-false check-not-false
-    check-eq? check-not-eq? check-equal?))
-
-  ;; I have decided to use the capital letter convention for variables
-  (vars A B C D))
+(provide == any any* all* fresh vars)
 
 ;;; GOALS
 ;;; All goals must return a closure of type (substitution -> substitution list)
@@ -36,7 +27,19 @@
       ([g g*])
       (append (g s) results))))
 
+;; Make any lazy so that we can avoid executing branches
+;; otherwise any recursive code will not terminate
+(define-syntax-rule (any g ...)
+  (any* (lambda (s) (g s)) ...))
+
 (module+ test
+  ;; 'fail' from rackunit conflicts with my fail defined below
+  (require (only-in rackunit
+    check-true check-false check-not-false
+    check-eq? check-not-eq? check-equal?))
+
+  ;; I have decided to use the capital letter convention for variables
+  (vars A B C D)
   (check-equal? ((any* (== 'a 'b) (== A A)) empty-s) '(()))
   (check-equal? ((any* fail fail) empty-s) (fail 'a))
   (check-true (set=?
