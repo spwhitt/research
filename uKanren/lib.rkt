@@ -1,15 +1,14 @@
 #lang racket
 (provide var var? var= vars fresh unify empty-s apply-substitution)
 
-;; Variables
-(define (var x)
-  (cons '? x))
-
-(define (var? x)
-  (and (pair? x)
-       (eq? (car x) '?)))
-
 (define var= eq?)
+;; Use a struct to create variables
+;; As a consequence, any equality primitive (eq?, eqv?, equal?) will behave correctly
+;; Also includes pretty printing as ?V
+(struct var (name)
+  #:methods gen:custom-write
+  [(define (write-proc v port mode)
+     (fprintf port "?~a" (var-name v))) ])
 
 ;; `let` style convenience for creating variables
 (define-syntax-rule (fresh (v ...) expr)
@@ -46,8 +45,6 @@
     ((and val (var? var)) (resolve (cdr val) subs))
     (else var)))
 
-; TODO: pair? returns #t for var? because my current variables ARE implemented
-; as pairs but this seems like a sharp edge which should be filed down
 (define (apply-substitution s t)
   (cond
     ((var? t) (resolve t s))
