@@ -1,7 +1,16 @@
 #lang racket
-(provide var var? var= vars fresh unify empty-s apply-substitution)
+(provide
+  vars fresh
+  (contract-out
+    [var (-> symbol? var?)]
+    [var? (-> var? boolean?)]
+    [empty-s list?]
+    ;;[resolve (-> var? (listof pair?) any)]
+    [apply-substitution (-> (listof pair?) any/c any)]
+    [display-substitution (-> (listof pair?) any)]
+    [unify (-> any/c any/c (listof pair?) (or/c (listof pair?) boolean?))]
+    ))
 
-(define var= eq?)
 ;; Use a struct to create variables
 ;; As a consequence, any equality primitive (eq?, eqv?, equal?) will behave correctly
 ;; Also includes pretty printing as ?V
