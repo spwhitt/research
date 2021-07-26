@@ -45,20 +45,45 @@
     ((and val (var? var)) (resolve (cdr val) subs))
     (else var)))
 
-(define (apply-substitution s t)
-  (cond
-    ((var? t) (resolve t s))
-    ((pair? t) (cons (apply-substitution s (car t)) (apply-substitution s (cdr t))))
-    (else t)))
-
 (module+ test
   (define ex-s `((,A . ,B) (,B . ,C) (,C . v)))
   (check-equal? (resolve A ex-s) 'v)
   (check-equal? (resolve B ex-s) 'v)
   (check-equal? (resolve 'q ex-s) 'q)
-  (check-equal? (resolve D ex-s) D)
+  (check-equal? (resolve D ex-s) D))
 
-  (check-equal? (apply-substitution ex-s (list A B C D)) (list 'v 'v 'v D)))
+; Substitutes all variables in a term for the appropriate value from the
+; substitution list. Recursively apply on this value as well.
+(define (apply-substitution s t)
+  (cond
+    ((var? t)
+     (define val (assq t s))
+     (if val (apply-substitution s (cdr val)) t))
+    ((pair? t)
+     (cons
+       (apply-substitution s (car t))
+       (apply-substitution s (cdr t))))
+    (else t)))
+
+(module+ test
+  (check-equal?
+    (apply-substitution
+      `((,A . a)) A)
+    'a)
+  (check-equal?
+    (apply-substitution
+      `((,A . ,B) (,B . a)) A)
+    'a)
+  (check-equal?
+    (apply-substitution
+      `((,A . a) (,B . b) (,C . (,A . ,B))) C)
+    '(a . b))
+  (check-equal?
+    (apply-substitution
+      `((,A . ,B) (,B . ,C) (,C . v)) (list A (list B C) D))
+    (list 'v (list 'v 'v) D))
+  )
+
 
 ;; Parameters:
 ;;   left, right: Expressions to unify
