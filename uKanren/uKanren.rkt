@@ -1,6 +1,6 @@
 #lang racket
 (require "lib.rkt")
-(provide == any any* all* fresh vars)
+(provide == any any* all* fresh vars run)
 
 ;;; GOALS
 ;;; All goals must return a closure of type (substitution -> substitution list)
@@ -9,6 +9,19 @@
 ;; Empty list indicates no valid substitutions - eg failure
 (define fail (lambda (_) '()))
 (define succeed (lambda (s) (list s)))
+
+;; Execute goal and display cleaned-up values for variable v
+(define (run v goal)
+  ;; Kick off execution
+  (define subs (goal empty-s))
+
+  ;; Reify the variables for output
+  ;; Use existing variable names, disambiguated with a number (Coq style)
+
+  ;; List possible values for v
+  ;; Substitute all variables in those terms for their final values
+  (for/list ([s subs]) (apply-substitution s v))
+  )
 
 ;; Unify turned into a goal
 (define (== left right)
@@ -33,10 +46,8 @@
   (any* (lambda (s) (g s)) ...))
 
 (module+ test
-  ;; 'fail' from rackunit conflicts with my fail defined below
-  (require (only-in rackunit
-    check-true check-false check-not-false
-    check-eq? check-not-eq? check-equal?))
+  ;; 'fail' from rackunit conflicts with my fail defined above
+  (require (except-in rackunit fail))
 
   ;; I have decided to use the capital letter convention for variables
   (vars A B C D)
