@@ -48,10 +48,16 @@
 
 ;; Resolve a chain of substitutions for a variable
 ;; Maybe a union find structure would be efficient here?
+;;
+;; The following are non-terminating examples
+;;     (resolve A `((,A . ,A)))
+;;     (resolve A `((,A . ,B)(,B . ,A)))
+;; For this reason we must prevent cycles in the substitution list
 (define (resolve var subs)
-  (define val (assq var subs))
   (cond
-    ((and val (var? var)) (resolve (cdr val) subs))
+    ((var? var)
+      (define val (assq var subs))
+      (if val (resolve (cdr val) subs) var))
     (else var)))
 
 (module+ test
@@ -61,8 +67,13 @@
   (check-equal? (resolve 'q ex-s) 'q)
   (check-equal? (resolve D ex-s) D))
 
-; Substitutes all variables in a term for the appropriate value from the
-; substitution list. Recursively apply on this value as well.
+;; Substitutes all variables in a term for the appropriate value from the
+;; substitution list. Recursively apply on this value as well.
+;;
+;; The following are non-terminating:
+;;     (apply-substitution `((,A . ,A)) A)
+;;     (apply-substitution `((,A . (,A . ,A))) A)
+;; For this reason we must prevent cycles of variable occurence in right hand terms
 (define (apply-substitution s t)
   (cond
     ((var? t)
@@ -104,19 +115,21 @@
 (define (unify left right subs)
   (define vl (resolve left subs))
   (define vr (resolve right subs))
-  (cond 
+  (cond
     ((eq? vl vr) subs)
     ((var? vl) (extend-s vl vr subs))
     ((var? vr) (extend-s vr vl subs))
     ((and (pair? vl) (pair? vr))
-     (define s1 (unify (car vl) (car vr) subs))
-     (if s1 (unify (cdr vl) (cdr vr) s1) #f))
+     (match-define (cons la lb) vl)
+     (match-define (cons ra rb) vr)
+     (define s1 (unify la ra subs))
+     (if s1 (unify lb rb s1) #f))
     (else #f)))
 
 (module+ test
   (check-equal? (unify 'a 'a empty-s) empty-s)
   (check-false (unify 'a 'b empty-s))
-  
+
   (check-equal? (unify A 'a empty-s) `((,A . a)))
   (check-false (unify A 'a `((,A . b))))
 
@@ -131,7 +144,7 @@
                  (cons (cons A C) (cons A D))
                  (cons (cons B D) (cons D 'v))
                  empty-s))
+
   (check-equal? (resolve A subs) 'v)
   (check-equal? (resolve B subs) 'v)
   (check-equal? (resolve C subs) 'v))
-

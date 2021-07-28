@@ -66,4 +66,5 @@
       (apply append (map g results)))))
 
 (module+ test
-  (check-equal? ((all* (== A 'a) (== A 'b)) empty-s) '()))
+  (check-equal? ((all* (== A 'a) (== A 'b)) empty-s) '())
+  (check-equal? ((all* (== A B) (== B C) (== 'a 'b)) empty-s) '()))
