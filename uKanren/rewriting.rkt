@@ -2,6 +2,8 @@
 
 (require "lib.rkt")
 
+(provide vars defrule innermost choice bottomup try all id topdown)
+
 ;; Lets create a rewriting system
 ;; First lets see what terms might look like
 
@@ -84,3 +86,99 @@
   (check-equal? (+-assoc-m math-term)  '((+ (+ 5 10) 2)))
   (check-equal? (+-assoc-m '(* 3 (* 4 5))) '())
   )
+
+;;; Strategies
+
+;; Leaves term unchanged
+(define (id t) (list t))
+;; Alternate definition as a rule:
+;; (defrule idr A A)
+
+;; Always fails
+(define (fail t) (list))
+
+;; Apply strategies consecutively left-to-right
+(define (compose . strategies)
+  (lambda (x)
+    (for/fold
+      ([results (list x)])
+      ([s strategies])
+      #:break (empty? results) 
+      (append-map s results))))
+
+;; Try s1. If it fails, use s2...
+(define (choice . choices )
+  (define (helper choices x)
+    (cond
+      ((empty? choices) (fail x))
+      (else
+        (define s (car choices))
+        (define r (s x))
+        (if (empty? r) (helper (cdr choices) x) r)
+        )))
+  (lambda (x) (helper choices x)))
+
+;; Apply s to all the direct subterms of a term
+;; TODO: append mashes failure '() together with success '(TERM), causing
+;; failures to vanish. This is probably not desirable behavior
+(define (all s)
+  (lambda (t)
+    (cond
+      ((list? t) (append-map s t))
+      (else (fail t)))))
+
+;; Visits subterms left-to-right, only modifies the first that succeeds
+(define (one s) #f)
+
+;; Attempts s but does nothing if it fails
+(define (try s)
+  (choice s id))
+
+;;; Recursive calls need to be eta-expanded with this lambda (t) wrapper
+;;; because racket is not lazy. There is surely a better way to do this
+;;; will tackle that later.
+
+;; Repeatedly apply s to a term
+(define (repeat s)
+  (try (compose s (lambda (t) ((repeat s) t)))))
+
+;; Apply s to entire term, starting at top
+;; Preorder Traversal?
+(define (topdown s)
+  (compose s (all (lambda (t) ((topdown s) t)))))
+
+;; Apply s to entire term, starting at bottom
+;; Postorder Traversal
+(define (bottomup s)
+  (compose (all (lambda (t) ((bottomup s) t))) s))
+
+;; Apply s to the entire term, first on the way down, then on the way up
+(define (downup s)
+  (compose s (lambda (t) ((downup s) t)) s))
+
+;; post-order traversal
+(define (innermost s)
+  (bottomup (try (compose s (lambda (t) ((innermost s) t))))))
+
+(define (oncetd s)
+  (choice s (one (lambda (t) ((oncetd s) t)))))
+
+(define (alltd s)
+  (choice s (all (lambda (t) ((alltd s) t)))))
+
+(module+ test
+  ;; Peano rules
+  (defrule plus-0 `(+ z ,A) A)
+  (defrule plus-n `(+ (s ,A) ,B) `(+ ,A (s ,B)))
+
+  (define one '(s z))
+  (define two '(s (s z)))
+  (define three '(s (s (s z))))
+  (define four '(s (s (s (s z)))))
+
+  (define plus-onestep (choice plus-0 plus-n))
+
+  (check-equal? (plus-onestep `(+ z ,three)) (id three))
+  (check-equal? (plus-onestep `(+ ,three ,one)) (id `(+ ,two ,two)))
+
+  (check-equal? ((repeat plus-onestep) `(+ ,three ,one)) (id  four)))
